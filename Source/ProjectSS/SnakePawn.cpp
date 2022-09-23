@@ -24,6 +24,9 @@ void ASnakePawn::OnConstruction(const FTransform& Transform)
 	{
 		AddCollisionSpheres();
 		AddSplineMeshes();
+
+		AddPhysicsConstraints();
+		AddSplineComponent();
 	}
 	else { ClearIfNeeded(); }
 }
@@ -33,6 +36,13 @@ void ASnakePawn::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	if (!CreateViaConstructionScript || ForceCreationOnBeginPlay)
+	{
+		AddCollisionSpheres();
+		AddSplineMeshes();
+		AddPhysicsConstraints();
+		AddSplineComponent();
+	}
 }
 
 // Called every frame
@@ -117,19 +127,81 @@ float ASnakePawn::CalculateMass(int index, float CurrentSphereRadius)
 	return CurrentSphereRadius / DefaultRadius * DefaultMass * MassScale;
 }
 
-void ASnakePawn::AddPhysicsConstraints()
+bool ASnakePawn::AddPhysicsConstraints()
 {
-	
+	if (CollisionSpheresList.Num() <= 0) { return false; }
+	for (int i = 0; i < CollisionSpheresList.Num() - 1; i++)
+	{
+		UPhysicsConstraintComponent* CurrentConstraint = NewObject<UPhysicsConstraintComponent>(this, UPhysicsConstraintComponent::StaticClass());
+
+		CurrentConstraint->SetLinearXLimit(ELinearConstraintMotion::LCM_Locked, 0.0f);
+		CurrentConstraint->SetLinearYLimit(ELinearConstraintMotion::LCM_Locked, 0.0f);
+		CurrentConstraint->SetLinearZLimit(ELinearConstraintMotion::LCM_Locked, 0.0f);
+		CurrentConstraint->SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Limited, 50.0f);
+		CurrentConstraint->SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Limited, 50.0f);
+		CurrentConstraint->SetAngularTwistLimit(EAngularConstraintMotion::ACM_Limited, 50.0f);
+
+		FVector loc = (CollisionSpheresList[i]->GetComponentLocation() + CollisionSpheresList[i + 1]->GetComponentLocation()) / 2.0f;
+		CurrentConstraint->SetWorldLocation(loc);
+		CurrentConstraint->SetConstrainedComponents(CollisionSpheresList[i], FName(TEXT("None")), CollisionSpheresList[i + 1], FName(TEXT("None")));
+
+		PhysicsConstraintsList.Add(CurrentConstraint);
+
+		// DEBUG
+		CurrentConstraint->SetVisibility(true);
+		CurrentConstraint->SetHiddenInGame(false);
+	}
+
+	return (PhysicsConstraintsList.Num() == NodesCount - 1) ? true : false;
 }
 
-void ASnakePawn::AddSplineMeshes()
+bool ASnakePawn::AddSplineMeshes()
 {
+	if (CollisionSpheresList.Num() <= 0) { return false; }
 
+	// Empty current spline mesh list
+	for (USplineMeshComponent* SplineMesh : SplineMeshesList)
+	{
+		if (IsValid(SplineMesh)) { SplineMesh->DestroyComponent(); }
+	}
+	SplineMeshesList.Empty();
+
+	for (int i = 0; i < CollisionSpheresList.Num()-1; i++)
+	{
+		USplineMeshComponent* CurrentSplineMesh = NewObject<USplineMeshComponent>(this, USplineMeshComponent::StaticClass());
+		CurrentSplineMesh->RegisterComponent();
+		CurrentSplineMesh->AttachToComponent(GetRootComponent(), FAttachmentTransformRules::KeepWorldTransform);
+		CurrentSplineMesh->SetCollisionProfileName(TEXT("NoCollision"));
+
+		SplineMeshesList.Add(CurrentSplineMesh);
+
+		CurrentSplineMesh->SetStartScale(FVector2D(CollisionSpheresList[i]->GetScaledSphereRadius() / 50.0f, CollisionSpheresList[i]->GetScaledSphereRadius() / 50.0f), true);
+		CurrentSplineMesh->SetEndScale(FVector2D(CollisionSpheresList[i + 1]->GetScaledSphereRadius() / 50.0f, CollisionSpheresList[i + 1]->GetScaledSphereRadius() / 50.0f), true);
+		CurrentSplineMesh->SetStartAndEnd(CollisionSpheresList[i]->GetComponentLocation(), GetActorForwardVector(), CollisionSpheresList[i+1]->GetComponentLocation(), GetActorForwardVector(), true);
+	}
+
+	// Set the meshes
+	SplineMeshesList[0]->SetStaticMesh(HeadMesh);
+	SplineMeshesList[NodesCount - 2]->SetStaticMesh(TailMesh);
+	UE_LOG(LogTemp, Warning, TEXT("%d"), SplineMeshesList.Num());
+	for (int i = 1; i < SplineMeshesList.Num() - 1; i++)
+	{
+		if (IsValid(SplineMeshesList[i])) { SplineMeshesList[i]->SetStaticMesh(BodyMesh); }
+	}
+
+	// Add code to set materials to mesh here if necessary
+	//
+	//
+
+	return (SplineMeshesList.Num() == NodesCount - 1) ? true : false;
 }
 
 void ASnakePawn::AddSplineComponent()
 {
-
+	SplineComponent = NewObject<USplineComponent>(this, USplineComponent::StaticClass());
+	SplineComponent->AttachToComponent(GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+	SplineComponent->SetAbsolute(true, true, true);
+	SplineComponent->ClearSplinePoints();
 }
 
 void ASnakePawn::ClearIfNeeded()

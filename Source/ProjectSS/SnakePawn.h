@@ -31,9 +31,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 		void AddCollisionSpheres();
 	UFUNCTION(BlueprintCallable)
-		void AddPhysicsConstraints();
+		bool AddPhysicsConstraints();
 	UFUNCTION(BlueprintCallable)
-		void AddSplineMeshes();
+		bool AddSplineMeshes();
 	UFUNCTION(BlueprintCallable)
 		void AddSplineComponent();
 	UFUNCTION(BlueprintCallable)
