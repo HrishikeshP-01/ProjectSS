@@ -50,6 +50,11 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	// Fn to calculate the radius of the current collision sphere
+	float CalculateRadius(int index);
+	// Fn to calculate mass of the current collision sphere
+	float CalculateMass(int index, float CurrentSphereRadius);
+
 private:
 	// The default (root) scene component
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
