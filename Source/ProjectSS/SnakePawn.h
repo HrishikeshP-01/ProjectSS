@@ -55,6 +55,9 @@ public:
 	// Fn to calculate mass of the current collision sphere
 	float CalculateMass(int index, float CurrentSphereRadius);
 
+	void UpdateSplineComponent();
+	void UpdateSplineMeshes();
+
 private:
 	// The default (root) scene component
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))

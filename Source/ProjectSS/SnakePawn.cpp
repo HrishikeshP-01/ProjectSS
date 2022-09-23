@@ -12,6 +12,7 @@ ASnakePawn::ASnakePawn()
 	// Set the root component
 	DefaultSceneComponent = CreateDefaultSubobject<USceneComponent>("Root");
 	SetRootComponent(DefaultSceneComponent);
+
 	// Initialize the arrow component
 	Arrow = CreateDefaultSubobject<UArrowComponent>("Arrow");
 	Arrow->AttachToComponent(GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
@@ -50,6 +51,8 @@ void ASnakePawn::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	UpdateSplineComponent();
+	UpdateSplineMeshes();
 }
 
 // Called to bind functionality to input
@@ -130,6 +133,14 @@ float ASnakePawn::CalculateMass(int index, float CurrentSphereRadius)
 bool ASnakePawn::AddPhysicsConstraints()
 {
 	if (CollisionSpheresList.Num() <= 0) { return false; }
+
+	// Destroy pre-existing constraints
+	for (UPhysicsConstraintComponent* CurrentConstraint : PhysicsConstraintsList)
+	{
+		if (IsValid(CurrentConstraint)) { CurrentConstraint->DestroyComponent(); }
+	}
+	PhysicsConstraintsList.Empty();
+
 	for (int i = 0; i < CollisionSpheresList.Num() - 1; i++)
 	{
 		UPhysicsConstraintComponent* CurrentConstraint = NewObject<UPhysicsConstraintComponent>(this, UPhysicsConstraintComponent::StaticClass());
@@ -170,8 +181,19 @@ bool ASnakePawn::AddSplineMeshes()
 	{
 		USplineMeshComponent* CurrentSplineMesh = NewObject<USplineMeshComponent>(this, USplineMeshComponent::StaticClass());
 		CurrentSplineMesh->RegisterComponent();
+		/*
+		Getting Error: Root component is not static, can't attach SplineMeshComponent which is static
+		Tried: 
+				Setting root to static (breaks the game)
+				Setting the SplineMeshComponent to Movable (no use)
+		Solution:
+				Didn't attach the SplineMeshComponent to anything
+
 		CurrentSplineMesh->AttachToComponent(GetRootComponent(), FAttachmentTransformRules::KeepWorldTransform);
+		CurrentSplineMesh->SetMobility(EComponentMobility::Movable);
+		*/
 		CurrentSplineMesh->SetCollisionProfileName(TEXT("NoCollision"));
+		CurrentSplineMesh->SetEnableGravity(false);
 
 		SplineMeshesList.Add(CurrentSplineMesh);
 
@@ -199,12 +221,56 @@ bool ASnakePawn::AddSplineMeshes()
 void ASnakePawn::AddSplineComponent()
 {
 	SplineComponent = NewObject<USplineComponent>(this, USplineComponent::StaticClass());
-	SplineComponent->AttachToComponent(GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+	//SplineComponent->AttachToComponent(GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+	//SplineComponent->SetMobility(EComponentMobility::Static);
 	SplineComponent->SetAbsolute(true, true, true);
 	SplineComponent->ClearSplinePoints();
 }
 
 void ASnakePawn::ClearIfNeeded()
 {
+	for (USphereComponent* CurrentSphere : CollisionSpheresList)
+	{
+		if (IsValid(CurrentSphere)) { CurrentSphere->DestroyComponent(); }
+	}
+	CollisionSpheresList.Empty();
 
+	for (USplineMeshComponent* CurrentSplineMesh : SplineMeshesList)
+	{
+		if (IsValid(CurrentSplineMesh)) { CurrentSplineMesh->DestroyComponent(); }
+	}
+	SplineMeshesList.Empty();
+
+	for (UPhysicsConstraintComponent* CurrentConstraint : PhysicsConstraintsList)
+	{
+		if (IsValid(CurrentConstraint)) { CurrentConstraint->DestroyComponent(); }
+	}
+	PhysicsConstraintsList.Empty();
+}
+
+void ASnakePawn::UpdateSplineComponent()
+{
+	SplineComponent->ClearSplinePoints();
+	for (int i = 0;i < CollisionSpheresList.Num()-1;i++)
+	{
+		SplineComponent->AddSplinePoint(CollisionSpheresList[i]->GetComponentLocation(), ESplineCoordinateSpace::World, false);
+	}
+	SplineComponent->AddSplinePoint(CollisionSpheresList[CollisionSpheresList.Num() - 1]->GetComponentLocation(), ESplineCoordinateSpace::World, true);
+}
+
+void ASnakePawn::UpdateSplineMeshes()
+{
+	for (int i = 0; i < SplineMeshesList.Num(); i++)
+	{
+		FVector StartPosition, StartTangent, StopPosition, StopTangent;
+		SplineComponent->GetLocationAndTangentAtSplinePoint(i, StartPosition, StartTangent, ESplineCoordinateSpace::Local);
+		//StartPosition = StartPosition - StartTangent.Normalize(0.0001f) * CollisionSpheresList[i]->GetScaledSphereRadius();
+		SplineComponent->GetLocationAndTangentAtSplinePoint(i+1, StopPosition, StopTangent, ESplineCoordinateSpace::Local);
+		//StopPosition = StopPosition - StopTangent.Normalize(0.0001f) * CollisionSpheresList[i + 1]->GetScaledSphereRadius();
+
+		SplineMeshesList[i]->SetStartAndEnd(StartPosition, StartTangent, StopPosition, StopTangent, false);
+
+		FVector SplineUpVector = SplineComponent->GetUpVectorAtSplinePoint(i, ESplineCoordinateSpace::Local);
+		SplineMeshesList[i]->SetSplineUpDir(SplineUpVector, true);
+	}
 }
