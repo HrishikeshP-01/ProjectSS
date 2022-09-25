@@ -39,6 +39,7 @@ void ASnakePawn::BeginPlay()
 	
 	if (!CreateViaConstructionScript || ForceCreationOnBeginPlay)
 	{
+		ClearIfNeeded();
 		AddCollisionSpheres();
 		AddSplineMeshes();
 		AddPhysicsConstraints();
@@ -58,8 +59,38 @@ void ASnakePawn::Tick(float DeltaTime)
 // Called to bind functionality to input
 void ASnakePawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
+	// Inherit bindings
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
+	/* Can't use this method as the parameter we use in the function are const i.e., the value at the time of binding will be used throughout.
+	   However am keeping this snippet as reference in case functions with parameters need to be binded in future.
+
+
+	// Debug fn takes an input parameter to we need to follow a different procedure
+	// Create delegate to connect with input binding
+	FInputActionHandlerSignature ActionHandler;
+	// Set delegate to the required fn and respective variable to be used as parameter
+	ActionHandler.BindUFunction(this, TEXT("Debug"), DebugOn);
+	// Preparing the Input binding
+	FInputActionBinding* ActionBinding = new FInputActionBinding(FName("Debug"), IE_Pressed);
+	// ActionBinding.KeyEvent = IE_Pressed;
+	// Connect delegate with input binding
+	ActionBinding->ActionDelegate = ActionHandler;
+	// Bind action
+	PlayerInputComponent->AddActionBinding(*ActionBinding);
+	
+		Instead of doing the above steps we could have made Debug without parameters.
+		As DebugOn is a global variable we don't need it to be passed.
+		However, I just wanted to learn how to bind action to functions with parameters.
+		---------------------------------------
+		SHOULD CLEAN THIS UP DURING PRODUCTION   
+		WONT BE NEEDING DEBUG THEN ANYWAYS       
+		---------------------------------------
+	
+
+	*/
+
+	PlayerInputComponent->BindAction(FName("Debug"), IE_Pressed, this, &ASnakePawn::Debug);
 }
 
 USphereComponent* ASnakePawn::GetHeadCollisionShape()
@@ -205,7 +236,6 @@ bool ASnakePawn::AddSplineMeshes()
 	// Set the meshes
 	SplineMeshesList[0]->SetStaticMesh(HeadMesh);
 	SplineMeshesList[NodesCount - 2]->SetStaticMesh(TailMesh);
-	UE_LOG(LogTemp, Warning, TEXT("%d"), SplineMeshesList.Num());
 	for (int i = 1; i < SplineMeshesList.Num() - 1; i++)
 	{
 		if (IsValid(SplineMeshesList[i])) { SplineMeshesList[i]->SetStaticMesh(BodyMesh); }
@@ -274,3 +304,23 @@ void ASnakePawn::UpdateSplineMeshes()
 		SplineMeshesList[i]->SetSplineUpDir(SplineUpVector, true);
 	}
 }
+
+// Debug Functions
+
+void ASnakePawn::Debug()
+{
+	// Debug functionality here
+	SetSnakeMeshVisibility(DebugOn);
+
+
+	DebugOn = !DebugOn;
+}
+
+void ASnakePawn::SetSnakeMeshVisibility(bool IsVisible)
+{
+	for (USplineMeshComponent* CurrentSplineMesh : SplineMeshesList)
+	{
+		if (IsValid(CurrentSplineMesh)) { CurrentSplineMesh->SetVisibility(IsVisible, false); /* Wont propogate to children */ }
+	}
+}
+

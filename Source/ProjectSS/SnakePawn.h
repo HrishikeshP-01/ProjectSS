@@ -55,8 +55,15 @@ public:
 	// Fn to calculate mass of the current collision sphere
 	float CalculateMass(int index, float CurrentSphereRadius);
 
+	// Fn to create snake mesh
 	void UpdateSplineComponent();
 	void UpdateSplineMeshes();
+
+	// Debug Fns
+	UFUNCTION(BlueprintCallable)
+	void Debug();
+	void SetSnakeMeshVisibility(bool IsVisible);
+	void DrawDebugSpheres();
 
 private:
 	// The default (root) scene component
@@ -80,12 +87,15 @@ public:
 	// Sphere Color
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Debug", meta = (AllowPrivateAccess = "true"))
 		FLinearColor DebugSphereColor = FLinearColor(1.0f, 0.895769f, 0.0f, 1.0f);
+	// Variable for debug On
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug", meta = (AllowPrivateAccess = "true"))
+		bool DebugOn = false;
 
 	// Properties variables
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Properties")
 		bool CreateViaConstructionScript = true;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Properties")
-		bool ForceCreationOnBeginPlay = true;
+		bool ForceCreationOnBeginPlay = false; // Setting this to true with CreateViaConstructionScript = true i.e., creating the snake at runtime throws off the character a bit
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Properties")
 		float DefaultRadius = 26.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Properties")
