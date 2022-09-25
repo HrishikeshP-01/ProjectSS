@@ -11,6 +11,8 @@
 #include "Components/SphereComponent.h"
 #include "Components/SplineMeshComponent.h"
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
+// For debug purposes remove this and all functionality pertaining to it before release
+#include "DrawDebugHelpers.h"
 #include "SnakePawn.generated.h"
 
 UCLASS()
@@ -63,7 +65,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void Debug();
 	void SetSnakeMeshVisibility(bool IsVisible);
-	void DrawDebugSpheres();
+	void DrawDebugSpheres(bool IsVisible);
+	void DrawDebugSpline();
 
 private:
 	// The default (root) scene component
@@ -83,7 +86,7 @@ public:
 		float DebugLineScale = 0.2f;
 	// Line Color
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Debug", meta = (AllowPrivateAccess = "true"))
-		FLinearColor DebugLineColor = FLinearColor(1.0f, 0.119676f, 0.0f, 1.0f);
+		FColor DebugLineColor = FColor(1.0f, 0.119676f, 0.0f, 1.0f);
 	// Sphere Color
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Debug", meta = (AllowPrivateAccess = "true"))
 		FLinearColor DebugSphereColor = FLinearColor(1.0f, 0.895769f, 0.0f, 1.0f);

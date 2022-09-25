@@ -54,6 +54,18 @@ void ASnakePawn::Tick(float DeltaTime)
 
 	UpdateSplineComponent();
 	UpdateSplineMeshes();
+
+
+	/*  
+	------------------------
+	For debugging
+	Remove this before release
+	------------------------
+	*/
+	if (DebugOn)
+	{
+		DrawDebugSpline();
+	}
 }
 
 // Called to bind functionality to input
@@ -143,8 +155,8 @@ void ASnakePawn::AddCollisionSpheres()
 		CollisionSpheresList.Add(CurrentSphere);
 
 		// DEBUG
-		CurrentSphere->SetVisibility(true);
-		CurrentSphere->SetHiddenInGame(false);
+		//CurrentSphere->SetVisibility(true);
+		//CurrentSphere->SetHiddenInGame(false);
 	}
 }
 
@@ -311,7 +323,7 @@ void ASnakePawn::Debug()
 {
 	// Debug functionality here
 	SetSnakeMeshVisibility(DebugOn);
-
+	DrawDebugSpheres(DebugOn);
 
 	DebugOn = !DebugOn;
 }
@@ -324,3 +336,25 @@ void ASnakePawn::SetSnakeMeshVisibility(bool IsVisible)
 	}
 }
 
+void ASnakePawn::DrawDebugSpheres(bool IsVisible)
+{
+	for (USphereComponent* CurrentSphere : CollisionSpheresList)
+	{
+		if (IsValid(CurrentSphere))
+		{
+			CurrentSphere->SetHiddenInGame(IsVisible); // Since we want it to do the opposite of the current DebugOn value
+		}
+	}
+	/*
+		To customize the spheres we can use DrawDebugSpheres() fn instead
+		however this will do for now
+	*/
+}
+
+void ASnakePawn::DrawDebugSpline()
+{
+	for (int i = 0;i < SplineComponent->GetNumberOfSplinePoints()-1;i++)
+	{
+		DrawDebugLine(GetWorld(), SplineComponent->GetLocationAtSplinePoint(i, ESplineCoordinateSpace::World), SplineComponent->GetLocationAtSplinePoint(i+1, ESplineCoordinateSpace::World), DebugLineColor, false, 0.0f, 0, 10.0f * DebugLineScale);
+	}
+}
